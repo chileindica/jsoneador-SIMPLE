@@ -21,12 +21,12 @@ Si necesitas sólo obtener un cliente, puede acceder por el `id` desde la URL:
 
 	GET http://api.ejemplo.com/clientes/123/
 
-##Requirements
+##Requisitos
 
 - PHP 5.3+ & PDO
 - SQLite / MySQL / PostgreSQL
 
-##Installation
+##Instalación
 
 Renombra el archivo config.sample.php como config.php y modifica la variable `$dsn`:
 
@@ -42,11 +42,7 @@ Ejemplos:
 
 Se recomienda crear un usuario de la base de datos especial para este servicio y con acceso de sólo lectura a las tablas.
 
-
-
-
-
-If you're using Apache, you can use the following `mod_rewrite` rules in a `.htaccess` file:
+De usar Apache, se debe contar con la extensión `mod_rewrite` habilitada, dado que se utiliza en el archivo `.htaccess` :
 
 ```apache
 <IfModule mod_rewrite.c>
@@ -101,8 +97,8 @@ To put this into practice below are some example of how you would use the Arrest
 	# Get all rows from the "customers" table
 	GET http://api.example.com/customers/
 
-	# Get a single row from the "customers" table (where "123" is the ID)
-	GET http://api.example.com/customers/123/
+	# Get a single row from the "customers" table (where "123" is the ID plus using token)
+	GET http://api.example.com/customers/123/?token="blablabla"
 
 	# Get all rows from the "customers" table where the "country" field matches "Australia" (`LIKE`)
 	GET http://api.example.com/customers/country/Australia/
@@ -112,15 +108,6 @@ To put this into practice below are some example of how you would use the Arrest
 
 	# Get 50 rows from the "customers" table ordered by the "date" field
 	GET http://api.example.com/customers/?limit=50&by=date&order=desc
-
-	# Create a new row in the "customers" table where the POST data corresponds to the database fields
-	POST http://api.example.com/customers/
-
-	# Update customer "123" in the "customers" table where the PUT data corresponds to the database fields
-	PUT http://api.example.com/customers/123/
-
-	# Delete customer "123" from the "customers" table
-	DELETE http://api.example.com/customers/123/
 
 ##Respuestas
 
@@ -179,10 +166,10 @@ callback(JSON);
 
 ##Credits
 
+jsoneador-SIMPLE es una porción de código modificada por basada en [ArrestDB](https://github.com/alixaxel/ArrestDB)
+
 ArrestDB is a complete rewrite of [Arrest-MySQL](https://github.com/gilbitron/Arrest-MySQL) with several optimizations and additional features.
 
 ##License (MIT)
 
-Copyright (c) 2014 Alix Axel (alix.axel@gmail.com).
 
-[![Donate Bitcoins](https://coinbase.com/assets/buttons/donation_small.png)](https://coinbase.com/checkouts/89e8aa2876ba534f9db3fafa8be4e5fa)
