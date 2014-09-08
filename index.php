@@ -1,9 +1,6 @@
 <?php
 
-$dsn = '';
-$clients = array
-(
-);
+include ('config.php');
 
 /**
 * The MIT License
@@ -16,6 +13,13 @@ $clients = array
 if (strcmp(PHP_SAPI, 'cli') === 0)
 {
 	exit('ArrestDB should not be run from CLI.' . PHP_EOL);
+}
+
+if (( $token !== '' ) && ( !isset($_GET['token']) || ($_GET['token'] !== $token ) ) )
+{
+	$result = ArrestDB::$INVALID_TOKEN;
+
+	exit(ArrestDB::Reply($result));
 }
 
 if ((empty($clients) !== true) && (in_array($_SERVER['REMOTE_ADDR'], (array) $clients) !== true))
@@ -142,174 +146,6 @@ ArrestDB::Serve('GET', '/(#any)/(#num)?', function ($table, $id = null)
 	return ArrestDB::Reply($result);
 });
 
-ArrestDB::Serve('DELETE', '/(#any)/(#num)', function ($table, $id)
-{
-	$query = array
-	(
-		sprintf('DELETE FROM "%s" WHERE "%s" = ?', $table, 'id'),
-	);
-
-	$query = sprintf('%s;', implode(' ', $query));
-	$result = ArrestDB::Query($query, $id);
-
-	if ($result === false)
-	{
-		$result = ArrestDB::$NOT_FOUND;
-	}
-
-	else if (empty($result) === true)
-	{
-		$result = ArrestDB::$NO_CONTENT;
-	}
-
-	else
-	{
-		$result = ArrestDB::$OK;
-	}
-
-	return ArrestDB::Reply($result);
-});
-
-if (in_array($http = strtoupper($_SERVER['REQUEST_METHOD']), array('POST', 'PUT')) === true)
-{
-	if (preg_match('~^\x78[\x01\x5E\x9C\xDA]~', $data = file_get_contents('php://input')) > 0)
-	{
-		$data = gzuncompress($data);
-	}
-
-	if ((array_key_exists('CONTENT_TYPE', $_SERVER) === true) && (empty($data) !== true))
-	{
-		if (strncasecmp($_SERVER['CONTENT_TYPE'], 'application/json', 16) === 0)
-		{
-			$GLOBALS['_' . $http] = json_decode($data, true);
-		}
-
-		else if ((strncasecmp($_SERVER['CONTENT_TYPE'], 'application/x-www-form-urlencoded', 33) === 0) && (strcasecmp($_SERVER['REQUEST_METHOD'], 'PUT') === 0))
-		{
-			parse_str($data, $GLOBALS['_' . $http]);
-		}
-	}
-
-	if ((isset($GLOBALS['_' . $http]) !== true) || (is_array($GLOBALS['_' . $http]) !== true))
-	{
-		$GLOBALS['_' . $http] = array();
-	}
-
-	unset($data);
-}
-
-ArrestDB::Serve('POST', '/(#any)', function ($table)
-{
-	if (empty($_POST) === true)
-	{
-		$result = ArrestDB::$NO_CONTENT;
-	}
-
-	else if (is_array($_POST) === true)
-	{
-		$queries = array();
-
-		if (count($_POST) == count($_POST, COUNT_RECURSIVE))
-		{
-			$_POST = array($_POST);
-		}
-
-		foreach ($_POST as $row)
-		{
-			$data = array();
-
-			foreach ($row as $key => $value)
-			{
-				$data[sprintf('"%s"', $key)] = $value;
-			}
-
-			$query = array
-			(
-				sprintf('INSERT INTO "%s" (%s) VALUES (%s)', $table, implode(', ', array_keys($data)), implode(', ', array_fill(0, count($data), '?'))),
-			);
-
-			$queries[] = array
-			(
-				sprintf('%s;', implode(' ', $query)),
-				$data,
-			);
-		}
-
-		if (count($queries) > 1)
-		{
-			ArrestDB::Query()->beginTransaction();
-
-			while (is_null($query = array_shift($queries)) !== true)
-			{
-				if (($result = ArrestDB::Query($query[0], $query[1])) === false)
-				{
-					ArrestDB::Query()->rollBack(); break;
-				}
-			}
-
-			if (($result !== false) && (ArrestDB::Query()->inTransaction() === true))
-			{
-				$result = ArrestDB::Query()->commit();
-			}
-		}
-
-		else if (is_null($query = array_shift($queries)) !== true)
-		{
-			$result = ArrestDB::Query($query[0], $query[1]);
-		}
-
-		if ($result === false)
-		{
-			$result = ArrestDB::$CONFLICT;
-		}
-
-		else
-		{
-			$result = ArrestDB::$CREATED;
-		}
-	}
-
-	return ArrestDB::Reply($result);
-});
-
-ArrestDB::Serve('PUT', '/(#any)/(#num)', function ($table, $id)
-{
-	if (empty($GLOBALS['_PUT']) === true)
-	{
-		$result = ArrestDB::$NO_CONTENT;
-	}
-
-	else if (is_array($GLOBALS['_PUT']) === true)
-	{
-		$data = array();
-
-		foreach ($GLOBALS['_PUT'] as $key => $value)
-		{
-			$data[$key] = sprintf('"%s" = ?', $key);
-		}
-
-		$query = array
-		(
-			sprintf('UPDATE "%s" SET %s WHERE "%s" = ?', $table, implode(', ', $data), 'id'),
-		);
-
-		$query = sprintf('%s;', implode(' ', $query));
-		$result = ArrestDB::Query($query, $GLOBALS['_PUT'], $id);
-
-		if ($result === false)
-		{
-			$result = ArrestDB::$CONFLICT;
-		}
-
-		else
-		{
-			$result = ArrestDB::$OK;
-		}
-	}
-
-	return ArrestDB::Reply($result);
-});
-
 $result = ArrestDB::$BAD_REQUEST;
 
 exit(ArrestDB::Reply($result));
@@ -342,10 +178,16 @@ class ArrestDB
 			'status' => 'Bad Request',
 		),
 	);
+	public static $INVALID_TOKEN = array(
+		'error' => array(
+			'code' => 403,
+			'status' => 'Forbidden - Invalid Token'
+		)
+	);
 	public static $FORBIDDEN = array(
 		'error' => array(
 			'code' => 403,
-			'status' => 'Forbidden'
+			'status' => 'Forbidden - Ivalid request IP'
 		)
 	);
 	public static $NOT_FOUND = array(
@@ -535,6 +377,10 @@ class ArrestDB
 		foreach ($options as $option)
 		{
 			$bitmask |= (defined('JSON_' . $option) === true) ? constant('JSON_' . $option) : 0;
+		}
+
+		if(!isset($data['id'])){
+			$data = array('response' => $data);
 		}
 
 		if (($result = json_encode($data, $bitmask)) !== false)
